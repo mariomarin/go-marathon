@@ -197,8 +197,13 @@ func NewClient(config Config) (Marathon, error) {
 		config.PollingWaitTime = defaultPollingWaitTime
 	}
 
+	// step: if DCOSToken is set and DCOSPath is not, set DCOSPath to default value
+	if config.DCOSToken != "" && config.DCOSPath == "" {
+		config.DCOSPath = defaultDCOSPath
+	}
+
 	// step: create a new cluster
-	hosts, err := newCluster(config.HTTPClient, config.URL)
+	hosts, err := newCluster(config.HTTPClient, config.URL, config.DCOSPath)
 	if err != nil {
 		return nil, err
 	}
@@ -256,11 +261,6 @@ func (r *marathonClient) apiCall(method, uri string, body, result interface{}) e
 
 		// step: Create the endpoint url
 		url := fmt.Sprintf("%s/%s", member, uri)
-		if r.config.DCOSToken != "" && r.config.DCOSPath != "" {
-			url = fmt.Sprintf("%s/%s/%s", member, r.config.DCOSPath, uri)
-		} else if r.config.DCOSToken != "" {
-			url = fmt.Sprintf("%s/%s", member+"/marathon", uri)
-		}
 
 		// step: marshall the request to json
 		var requestBody []byte

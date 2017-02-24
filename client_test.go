@@ -39,6 +39,49 @@ func TestNewClient(t *testing.T) {
 	assert.Equal(t, conf.PollingWaitTime, defaultPollingWaitTime)
 }
 
+func TestDCOSPath(t *testing.T) {
+	cases := []struct {
+		DCOSToken string
+		DCOSPath  string
+		dcosPath  string
+	}{
+		{
+			DCOSToken: "",
+			DCOSPath:  "",
+			dcosPath:  "",
+		},
+		{
+			DCOSToken: "abcde",
+			DCOSPath:  "",
+			dcosPath:  defaultDCOSPath,
+		},
+		{
+			DCOSToken: "abcde",
+			DCOSPath:  "marathon-alice",
+			dcosPath:  "marathon-alice",
+		},
+	}
+
+	for _, x := range cases {
+
+		config := Config{
+			URL:       "http://127.0.0.1",
+			DCOSToken: x.DCOSToken,
+			DCOSPath:  x.DCOSPath,
+		}
+
+		cl, err := NewClient(config)
+
+		if !assert.Nil(t, err) {
+			return
+		}
+
+		conf := cl.(*marathonClient).config
+
+		assert.Equal(t, conf.DCOSPath, x.dcosPath)
+	}
+}
+
 func TestPing(t *testing.T) {
 	endpoint := newFakeMarathonEndpoint(t, nil)
 	defer endpoint.Close()
