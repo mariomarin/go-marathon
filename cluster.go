@@ -51,7 +51,7 @@ type member struct {
 }
 
 // newCluster returns a new marathon cluster
-func newCluster(client *http.Client, marathonURL string) (*cluster, error) {
+func newCluster(client *http.Client, marathonURL string, DCOSPath string) (*cluster, error) {
 	// step: extract and basic validate the endpoints
 	var members []*member
 	var defaultProto string
@@ -69,6 +69,12 @@ func newCluster(client *http.Client, marathonURL string) (*cluster, error) {
 
 			endpoint = fmt.Sprintf("%s://%s", defaultProto, endpoint)
 		}
+
+		// step: if DCOSPath is set add it to marathonURL
+		if DCOSPath != "" {
+			endpoint = endpoint + "/" + DCOSPath
+		}
+
 		// step: parse the url
 		u, err := url.Parse(endpoint)
 		if err != nil {

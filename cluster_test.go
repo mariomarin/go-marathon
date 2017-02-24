@@ -25,43 +25,70 @@ import (
 )
 
 func TestSize(t *testing.T) {
-	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL)
+	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL, "")
 	assert.NoError(t, err)
 	assert.Equal(t, cluster.size(), 3)
 }
 
 func TestActive(t *testing.T) {
-	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL)
+	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL, "")
 	assert.NoError(t, err)
 	assert.Equal(t, len(cluster.activeMembers()), 3)
 }
 
 func TestNonActive(t *testing.T) {
-	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL)
+	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL, "")
 	assert.NoError(t, err)
 	assert.Equal(t, len(cluster.nonActiveMembers()), 0)
 }
 
 func TestGetMember(t *testing.T) {
-	cluster, err := newCluster(http.DefaultClient, fakeMarathonURL)
-	assert.NoError(t, err)
-	member, err := cluster.getMember()
-	assert.NoError(t, err)
-	assert.Equal(t, member, "http://127.0.0.1:3000")
-}
+	cases := []struct {
+		DCOSPath    string
+		MarathonURL string
+		member      string
+		Ok          bool
+	}{
+		{
+			DCOSPath:    "",
+			MarathonURL: fakeMarathonURL,
+			member:      "http://127.0.0.1:3000",
+			Ok:          true,
+		},
+		{
+			DCOSPath:    "",
+			MarathonURL: fakeMarathonURLWithPath,
+			member:      "http://127.0.0.1:3000/path",
+			Ok:          true,
+		},
+		{
+			DCOSPath:    "marathon",
+			MarathonURL: fakeMarathonURL,
+			member:      "http://127.0.0.1:3000/marathon",
+			Ok:          true,
+		},
+	}
+	for i, x := range cases {
 
-func TestGetMemberWithPath(t *testing.T) {
-	cluster, err := newCluster(http.DefaultClient, fakeMarathonURLWithPath)
-	assert.NoError(t, err)
-	member, err := cluster.getMember()
-	assert.NoError(t, err)
-	assert.Equal(t, member, "http://127.0.0.1:3000/path")
+		cluster, err := newCluster(http.DefaultClient, x.MarathonURL, x.DCOSPath)
+		assert.NoError(t, err)
+		member, err := cluster.getMember()
+		assert.NoError(t, err)
+		assert.Equal(t, member, x.member)
+
+		if x.Ok && err != nil {
+			t.Errorf("case %d, did not expect an error: %s", i, err)
+		}
+		if !x.Ok && err == nil {
+			t.Errorf("case %d, expected to received an error", i)
+		}
+	}
 }
 
 func TestMarkDown(t *testing.T) {
 	endpoint := newFakeMarathonEndpoint(t, nil)
 	defer endpoint.Close()
-	cluster, err := newCluster(http.DefaultClient, endpoint.URL)
+	cluster, err := newCluster(http.DefaultClient, endpoint.URL, "")
 	assert.NoError(t, err)
 	assert.Equal(t, len(cluster.activeMembers()), 3)
 
@@ -121,7 +148,7 @@ func TestValidClusterHosts(t *testing.T) {
 		},
 	}
 	for _, x := range cs {
-		c, err := newCluster(http.DefaultClient, x.URL)
+		c, err := newCluster(http.DefaultClient, x.URL, "")
 		if !assert.NoError(t, err, "URL '%s' should not have thrown an error: %s", x.URL, err) {
 			continue
 		}
@@ -141,7 +168,7 @@ func TestInvalidClusterHosts(t *testing.T) {
 		"http://127.0.0.1:3000,127.0.0.1:3000,",
 		"foo://127.0.0.1:3000",
 	} {
-		_, err := newCluster(http.DefaultClient, invalidHost)
+		_, err := newCluster(http.DefaultClient, invalidHost, "")
 		if !assert.Error(t, err) {
 			t.Errorf("undetected invalid host: %s", invalidHost)
 		}
