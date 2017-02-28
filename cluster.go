@@ -51,7 +51,7 @@ type member struct {
 }
 
 // newCluster returns a new marathon cluster
-func newCluster(client *http.Client, marathonURL string, DCOSPath string) (*cluster, error) {
+func newCluster(client *http.Client, marathonURL string, isDCOS bool) (*cluster, error) {
 	// step: extract and basic validate the endpoints
 	var members []*member
 	var defaultProto string
@@ -69,12 +69,6 @@ func newCluster(client *http.Client, marathonURL string, DCOSPath string) (*clus
 
 			endpoint = fmt.Sprintf("%s://%s", defaultProto, endpoint)
 		}
-
-		// step: if DCOSPath is set add it to marathonURL
-		if DCOSPath != "" {
-			endpoint = endpoint + "/" + DCOSPath
-		}
-
 		// step: parse the url
 		u, err := url.Parse(endpoint)
 		if err != nil {
@@ -87,6 +81,13 @@ func newCluster(client *http.Client, marathonURL string, DCOSPath string) (*clus
 		// step: check for empty hosts
 		if u.Host == "" {
 			return nil, newInvalidEndpointError("endpoint: %s must have a host", endpoint)
+		}
+
+		// step: if DCOS is set and no path is given, set the default DCOS path.
+		// done in order to maintain compatibility with automatic addition of the
+		// default DCOS path.
+		if isDCOS && strings.TrimLeft(u.Path, "/") == "" {
+			u.Path = defaultDCOSPath
 		}
 
 		// step: create a new node for this endpoint
